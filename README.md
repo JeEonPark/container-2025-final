@@ -107,3 +107,4 @@ mypy .
 cd frontend
 npm run lint
 ```
+# Test GHCR permissions
