@@ -142,10 +142,10 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
     
-    - name: Test docker-compose
+    - name: Test docker compose
       run: |
-        docker-compose -f docker-compose.yml config
-        docker-compose -f docker-compose.yml build
+        docker compose -f docker-compose.yml config
+        docker compose -f docker-compose.yml build
 
   security-scan:
     name: Security Scan
