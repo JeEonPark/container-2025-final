@@ -1,17 +1,20 @@
+from typing import Generator, Any
+
 import pytest
+from flask.testing import FlaskClient
 
 from app import app
 
 
 @pytest.fixture
-def client():
+def client() -> Generator[FlaskClient, None, None]:
     """Create a test client for the Flask application."""
     app.config["TESTING"] = True
     with app.test_client() as client:
         yield client
 
 
-def test_hello_endpoint(client):
+def test_hello_endpoint(client: FlaskClient) -> None:
     """Test the /api/hello endpoint."""
     response = client.get("/api/hello")
     assert response.status_code == 200
@@ -22,13 +25,13 @@ def test_hello_endpoint(client):
     assert json_data["message"] == "Hello from Flask!"
 
 
-def test_hello_endpoint_content_type(client):
+def test_hello_endpoint_content_type(client: FlaskClient) -> None:
     """Test that the /api/hello endpoint returns JSON."""
     response = client.get("/api/hello")
     assert response.content_type == "application/json"
 
 
-def test_nonexistent_endpoint(client):
+def test_nonexistent_endpoint(client: FlaskClient) -> None:
     """Test that nonexistent endpoints return 404."""
     response = client.get("/api/nonexistent")
     assert response.status_code == 404
