@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: read
-  security-events: write
   actions: read
 
 jobs:
@@ -161,18 +160,4 @@ jobs:
         scan-type: 'fs'
         scan-ref: '.'
         format: 'table'
-        exit-code: '0'
-    
-    - name: Run Trivy vulnerability scanner (SARIF)
-      uses: aquasecurity/trivy-action@master
-      with:
-        scan-type: 'fs'
-        scan-ref: '.'
-        format: 'sarif'
-        output: 'trivy-results.sarif'
-    
-    - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v3
-      if: github.event_name != 'pull_request'
-      with:
-        sarif_file: 'trivy-results.sarif' 
+        exit-code: '0' 
