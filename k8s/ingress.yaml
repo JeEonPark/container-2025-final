@@ -4,22 +4,24 @@ metadata:
   name: fullstack-ingress
   namespace: jonny
   annotations:
-    kubernetes.io/ingress.class: "alb"
-    alb.ingress.kubernetes.io/scheme: internet-facing
-    alb.ingress.kubernetes.io/target-type: ip
-    alb.ingress.kubernetes.io/healthcheck-path: /
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    # Cloudflare에서 HTTPS를 처리하므로 클러스터 내부는 HTTP로 통신
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
 spec:
   rules:
-  - host: your-domain.com  # Replace with your domain
+  - host: container.devjonny.me
     http:
       paths:
-      - path: /api
+      - path: /api(/|$)(.*)
         pathType: Prefix
         backend:
           service:
             name: backend-service
             port:
-              number: 5001
+              number: 5000
       - path: /
         pathType: Prefix
         backend:

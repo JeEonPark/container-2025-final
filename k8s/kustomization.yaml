@@ -14,3 +14,4 @@ commonLabels:
   app.kubernetes.io/version: v1.0.0
 
 namespace: jonny 
+ 
