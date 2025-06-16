@@ -7,8 +7,9 @@ on:
     branches: [ main, develop ]
 
 permissions:
-  contents: read
+  contents: write
   actions: read
+  packages: write
 
 jobs:
   backend-tests:
@@ -168,6 +169,7 @@ jobs:
         git config --local user.name "GitHub Action"
         git add k8s/
         git commit -m "Update image tags to ${GITHUB_SHA::8}" || exit 0
+        git remote set-url origin https://x-access-token:${{ secrets.GHCR_TOKEN }}@github.com/${{ github.repository }}.git
         git push
 
   security-scan:
