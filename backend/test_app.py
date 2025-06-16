@@ -22,7 +22,7 @@ def test_hello_endpoint(client: FlaskClient) -> None:
     json_data = response.get_json()
     assert json_data is not None
     assert "message" in json_data
-    assert json_data["message"] == "Hello from Flask!"
+    assert json_data["message"] == "Hello from Flask! BLAHBLAHBLAHBLAH!!!!"
 
 
 def test_hello_endpoint_content_type(client: FlaskClient) -> None:
