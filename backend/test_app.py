@@ -35,4 +35,3 @@ def test_nonexistent_endpoint(client: FlaskClient) -> None:
     """Test that nonexistent endpoints return 404."""
     response = client.get("/api/nonexistent")
     assert response.status_code == 404
- 
