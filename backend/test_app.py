@@ -1,4 +1,4 @@
-from typing import Generator, Any
+from typing import Generator
 
 import pytest
 from flask.testing import FlaskClient
