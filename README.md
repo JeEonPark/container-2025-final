@@ -1,8 +1,5 @@
 # Frontend-Backend Hello World
 
-![CI/CD Pipeline](https://github.com/YOUR_USERNAME/YOUR_REPOSITORY/workflows/CI/CD%20Pipeline/badge.svg)
-[![codecov](https://codecov.io/gh/YOUR_USERNAME/YOUR_REPOSITORY/branch/main/graph/badge.svg)](https://codecov.io/gh/YOUR_USERNAME/YOUR_REPOSITORY)
-
 This project is a full-stack application consisting of a Flask backend and Angular frontend.
 
 ## 🚀 Features
