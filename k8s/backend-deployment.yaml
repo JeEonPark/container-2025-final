@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: backend
-        image: ghcr.io/jeeonpark/backend:5272d306
+        image: ghcr.io/jeeonpark/backend:65613f3c
         ports:
         - containerPort: 5001
         env:
