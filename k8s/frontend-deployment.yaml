@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: ghcr.io/jeeonpark/frontend:595f44ff
+        image: ghcr.io/jeeonpark/frontend:3a9d320f
         ports:
         - containerPort: 80
         resources:
