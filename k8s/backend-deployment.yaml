@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
       - name: backend
-        image: ghcr.io/jeeonpark/backend:${GITHUB_SHA::8}
+        image: ghcr.io/jeeonpark/backend:323c524d
         ports:
         - containerPort: 5000
         env:

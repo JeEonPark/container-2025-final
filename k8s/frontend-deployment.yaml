@@ -23,9 +23,9 @@ spec:
       containers:
       - name: frontend
 <<<<<<< HEAD
-        image: ghcr.io/jeeonpark/frontend:5c362895
+        image: ghcr.io/jeeonpark/frontend:323c524d
 =======
-        image: ghcr.io/jeeonpark/frontend:${GITHUB_SHA::8}
+        image: ghcr.io/jeeonpark/frontend:323c524d
 >>>>>>> c633e2d (fix: update deployment configurations)
         ports:
         - containerPort: 80
