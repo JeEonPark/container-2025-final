@@ -24,7 +24,7 @@ spec:
       - name: ghcr-token
       containers:
       - name: frontend
-        image: ghcr.io/jeeonpark/frontend:19b939e5
+        image: ghcr.io/jeeonpark/frontend:175727e6
         ports:
         - containerPort: 80
         resources:
