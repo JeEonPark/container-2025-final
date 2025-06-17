@@ -24,7 +24,7 @@ spec:
       - name: ghcr-token
       containers:
       - name: backend
-        image: ghcr.io/jeeonpark/backend:8b2d428b
+        image: ghcr.io/jeeonpark/backend:08f00d3b
         ports:
         - containerPort: 5000
         env:
