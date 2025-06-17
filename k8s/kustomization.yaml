@@ -6,10 +6,10 @@ resources:
   - backend-service.yaml
   - frontend-deployment.yaml
   - frontend-service.yaml
-  - ingress.yaml
+  # - ingress.yaml
 
 commonLabels:
-  app.kubernetes.io/name: fullstack-app
+  app.kubernetes.io/name: jonny-fullstack-app
   app.kubernetes.io/version: v1.0.0
 
 namespace: jonny
