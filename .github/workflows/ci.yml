@@ -187,8 +187,8 @@ jobs:
 
     - name: Deploy to EKS
       run: |
-        kubectl set image deployment/backend-deployment backend=${{ steps.meta.outputs.BACKEND_TAG }} -n jonny
-        kubectl set image deployment/frontend-deployment frontend=${{ steps.meta.outputs.FRONTEND_TAG }} -n jonny
+        kubectl apply -f k8s/backend-deployment.yaml -n jonny
+        kubectl apply -f k8s/frontend-deployment.yaml -n jonny
         kubectl rollout status deployment/backend-deployment -n jonny --timeout=300s
         kubectl rollout status deployment/frontend-deployment -n jonny --timeout=300s
 

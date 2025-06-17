@@ -20,13 +20,11 @@ spec:
       labels:
         app: frontend
     spec:
+      imagePullSecrets:
+      - name: ghcr-token
       containers:
       - name: frontend
-<<<<<<< HEAD
-        image: ghcr.io/jeeonpark/frontend:5c362895
-=======
-        image: ghcr.io/jeeonpark/frontend:${GITHUB_SHA::8}
->>>>>>> c633e2d (fix: update deployment configurations)
+        image: ghcr.io/jeeonpark/frontend:latest
         ports:
         - containerPort: 80
         resources:
