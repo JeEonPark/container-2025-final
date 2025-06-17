@@ -50,9 +50,7 @@ jobs:
 #     - name: Lint with flake8
 #       working-directory: ./backend
 #       run: |
-#         # stop the build if there are Python syntax errors or undefined names
 #         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-#         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
 #         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 #     
 #     - name: Type checking with mypy
@@ -114,111 +112,6 @@ jobs:
 #         flags: frontend
 #         name: frontend-coverage
 
-  docker-build-and-deploy:
-    name: Docker Build & Push
-    runs-on: ubuntu-latest
-#    needs: [backend-tests, frontend-tests]
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-    
-    - name: Login to GitHub Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GHCR_TOKEN }}
-        
-    - name: Generate image tags
-      id: meta
-      run: |
-        OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-        echo "BACKEND_TAG=ghcr.io/${OWNER_LOWER}/backend:${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
-        echo "FRONTEND_TAG=ghcr.io/${OWNER_LOWER}/frontend:${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
-    
-    - name: Build and push backend image
-      uses: docker/build-push-action@v5
-      with:
-        context: ./backend
-        platforms: linux/amd64,linux/arm64
-        push: true
-        tags: ${{ steps.meta.outputs.BACKEND_TAG }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-    
-    - name: Build and push frontend image
-      uses: docker/build-push-action@v5
-      with:
-        context: ./frontend
-        platforms: linux/amd64,linux/arm64
-        push: true
-        tags: ${{ steps.meta.outputs.FRONTEND_TAG }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-    
-    - name: Update Kubernetes manifests
-      run: |
-        sed -i "s|ghcr.io/jeeonpark/backend:.*|${{ steps.meta.outputs.BACKEND_TAG }}|g" k8s/backend-deployment.yaml
-        sed -i "s|ghcr.io/jeeonpark/frontend:.*|${{ steps.meta.outputs.FRONTEND_TAG }}|g" k8s/frontend-deployment.yaml
-    
-    - name: Commit and push updated manifests
-      run: |
-        git config --local user.email "jonny@devjonny.me"
-        git config --local user.name "DevJonny"
-        git add k8s/
-        git commit -m "Update image tags to ${GITHUB_SHA::8}" || exit 0
-        git remote set-url origin https://x-access-token:${{ secrets.GHCR_TOKEN }}@github.com/${{ github.repository }}.git
-        git push
-
-#    - name: Configure AWS credentials
-#      uses: aws-actions/configure-aws-credentials@v4
-#      with:
-#        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#        aws-region: us-east-1
-
-#    - name: Update kubeconfig
-#      run: |
-#        aws eks update-kubeconfig --region us-east-1 --name training-cluster-2025
-
-#    - name: Deploy to EKS
-#      run: |
-#        kubectl apply -f k8s/backend-deployment.yaml -n jonny
-#        kubectl apply -f k8s/frontend-deployment.yaml -n jonny
-#        kubectl rollout status deployment/backend-deployment -n jonny --timeout=300s
-#        kubectl rollout status deployment/frontend-deployment -n jonny --timeout=300s
-
-#   security-scan:
-#     name: Security Scan
-#     runs-on: ubuntu-latest
-#     
-#     steps:
-#     - uses: actions/checkout@v4
-#     
-#     - name: Run Trivy vulnerability scanner
-#       uses: aquasecurity/trivy-action@master
-#       with:
-#         scan-type: 'fs'
-#         scan-ref: '.'
-#         format: 'table'
-#         exit-code: '0' 
-name: CI/CD Pipeline
-
-on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
-
-permissions:
-  contents: write
-  actions: read
-  packages: write
-
-jobs:
   docker-build-and-deploy:
     name: Docker Build & Push
     runs-on: ubuntu-latest
