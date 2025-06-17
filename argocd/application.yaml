@@ -2,31 +2,19 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: fullstack-app
-  namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
+  namespace: jonny-argocd
 spec:
   project: default
   source:
-    repoURL: https://github.com/JeEonPark/container-2025-final.git
+    repoURL: 'https://github.com/JeEonPark/container-2025-final'
     targetRevision: main
     path: k8s
   destination:
-    server: https://kubernetes.default.svc
+    server: 'https://kubernetes.default.svc'
     namespace: jonny
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
-      allowEmpty: false
     syncOptions:
-    - CreateNamespace=true
-    - PrunePropagationPolicy=foreground
-    - PruneLast=true
-    retry:
-      limit: 5
-      backoff:
-        duration: 5s
-        factor: 2
-        maxDuration: 3m 
- 
+      - CreateNamespace=false

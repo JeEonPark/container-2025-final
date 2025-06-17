@@ -48,4 +48,4 @@ spec:
             path: /api/hello
             port: 5000
           initialDelaySeconds: 5
-          periodSeconds: 5 
+          periodSeconds: 5

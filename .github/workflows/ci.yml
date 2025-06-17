@@ -162,8 +162,8 @@ jobs:
     
     - name: Update Kubernetes manifests
       run: |
-        sed -i "s|ghcr.io/.*/backend:.*|${{ steps.meta.outputs.BACKEND_TAG }}|g" k8s/backend-deployment.yaml
-        sed -i "s|ghcr.io/.*/frontend:.*|${{ steps.meta.outputs.FRONTEND_TAG }}|g" k8s/frontend-deployment.yaml
+        sed -i "s|ghcr.io/jeeonpark/backend:.*|${{ steps.meta.outputs.BACKEND_TAG }}|g" k8s/backend-deployment.yaml
+        sed -i "s|ghcr.io/jeeonpark/frontend:.*|${{ steps.meta.outputs.FRONTEND_TAG }}|g" k8s/frontend-deployment.yaml
     
     - name: Commit and push updated manifests
       run: |

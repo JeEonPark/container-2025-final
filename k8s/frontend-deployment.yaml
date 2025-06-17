@@ -24,7 +24,7 @@ spec:
       - name: ghcr-token
       containers:
       - name: frontend
-        image: ghcr.io/jeeonpark/frontend:REPLACEME
+        image: ghcr.io/jeeonpark/frontend:latest
         ports:
         - containerPort: 80
         resources:
@@ -45,4 +45,4 @@ spec:
             path: /
             port: 80
           initialDelaySeconds: 5
-          periodSeconds: 5 
+          periodSeconds: 5
