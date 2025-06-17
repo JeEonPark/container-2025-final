@@ -6,10 +6,15 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: "nginx"
     nginx.ingress.kubernetes.io/rewrite-target: /
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
 spec:
+  tls:
+  - hosts:
+    - container.devjonny.me
+    secretName: tls-secret
+
   rules:
   - host: container.devjonny.me
     http:
