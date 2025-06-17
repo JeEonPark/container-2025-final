@@ -11,7 +11,7 @@ permissions:
   actions: read
   packages: write
 
-# jobs:
+jobs:
 #   backend-tests:
 #     name: Backend Tests & Static Analysis
 #     runs-on: ubuntu-latest
