@@ -155,31 +155,4 @@ jobs:
         tags: ${{ steps.meta.outputs.FRONTEND_TAG }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
-
-    - name: Update Kubernetes manifests
-      run: |
-        sed -i "s|ghcr.io/jeeonpark/backend:.*|${{ steps.meta.outputs.BACKEND_TAG }}|g" k8s/backend-deployment.yaml
-        sed -i "s|ghcr.io/jeeonpark/frontend:.*|${{ steps.meta.outputs.FRONTEND_TAG }}|g" k8s/frontend-deployment.yaml
-
-    - name: Commit and push updated manifests
-      run: |
-        git config --local user.email "jonny@devjonny.me"
-        git config --local user.name "DevJonny"
-        git add k8s/
-        git commit -m "Update image tags to ${GITHUB_SHA::8}" || exit 0
-        git remote set-url origin https://x-access-token:${{ secrets.GHCR_TOKEN }}@github.com/${{ github.repository }}.git
-        git push
-
-    - name: Sync Argo CD Application
-      run: echo "Deployment will be handled automatically by Argo CD."
-
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1
-
-    - name: Update kubeconfig
-      run: |
-        aws eks update-kubeconfig --region us-east-1 --name training-cluster-2025
+        
