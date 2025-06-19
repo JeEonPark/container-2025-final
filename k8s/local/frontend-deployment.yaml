@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: ghcr.io/jeeonpark/frontend-local:ab0d4e96
+        image: ghcr.io/jeeonpark/frontend-local:4d56d13c
         imagePullPolicy: Always
         ports:
         - containerPort: 80
