@@ -597,7 +597,8 @@ async def main():
     # Start WebSocket server on port 5000 to match Kubernetes deployment
     print("🎤 Starting WebSocket STT server on ws://0.0.0.0:5000")
     
-    async with websockets.serve(handle_websocket, "0.0.0.0", 5000):
+    # Fix: Use lambda to properly handle the path parameter
+    async with websockets.serve(lambda ws, path: handle_websocket(ws, path), "0.0.0.0", 5000):
         print("✅ WebSocket server started successfully")
         print("🔗 Connect to: ws://localhost:5000")
         print("🛑 Press Ctrl+C to stop")
