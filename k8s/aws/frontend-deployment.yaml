@@ -7,6 +7,7 @@ metadata:
     app: frontend
 spec:
   replicas: 3
+  revisionHistoryLimit: 3
   selector:
     matchLabels:
       app: frontend
@@ -25,6 +26,7 @@ spec:
       containers:
       - name: frontend
         image: ghcr.io/jeeonpark/frontend:175727e6
+        imagePullPolicy: Always
         ports:
         - containerPort: 80
         resources:

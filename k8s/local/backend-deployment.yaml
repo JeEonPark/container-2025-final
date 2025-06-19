@@ -6,7 +6,8 @@ metadata:
   labels:
     app: backend
 spec:
-  replicas: 1
+  replicas: 3
+  revisionHistoryLimit: 3
   selector:
     matchLabels:
       app: backend
@@ -23,6 +24,7 @@ spec:
       containers:
       - name: backend
         image: ghcr.io/jeeonpark/backend-local:9251da44
+        imagePullPolicy: Always
         ports:
         - containerPort: 5000
         env:
@@ -30,20 +32,9 @@ spec:
           value: "development"
         resources:
           requests:
-            memory: "128Mi"
-            cpu: "100m"
+            memory: "1Gi"
+            cpu: "500m"
           limits:
-            memory: "256Mi"
-            cpu: "200m"
-        livenessProbe:
-          httpGet:
-            path: /api/hello
-            port: 5000
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /api/hello
-            port: 5000
-          initialDelaySeconds: 5
-          periodSeconds: 5 
+            memory: "24Gi"
+            cpu: "8000m"
+ 
