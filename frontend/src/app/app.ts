@@ -58,7 +58,7 @@ export class App implements OnInit, OnDestroy {
     console.log('🔌 WebSocket 연결 시도...');
     this.connectionStatus = '연결 중...';
     
-    this.socket = io('http://localhost:5001', {
+    this.socket = io('http://localhost:5000', {
       transports: ['websocket', 'polling']
     });
     

@@ -148,8 +148,10 @@ jobs:
         platforms: linux/amd64,linux/arm64
         push: true
         tags: ${{ steps.meta.outputs.BACKEND_TAG }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+        cache-from: type=gha,scope=backend
+        cache-to: type=gha,mode=max,scope=backend
+        build-args: |
+          BUILDKIT_INLINE_CACHE=1
 
     - name: Build and push frontend image
       uses: docker/build-push-action@v5
@@ -158,8 +160,10 @@ jobs:
         platforms: linux/amd64,linux/arm64
         push: true
         tags: ${{ steps.meta.outputs.FRONTEND_TAG }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+        cache-from: type=gha,scope=frontend
+        cache-to: type=gha,mode=max,scope=frontend
+        build-args: |
+          BUILDKIT_INLINE_CACHE=1
 
     - name: Update Kubernetes manifests
       run: |

@@ -223,7 +223,7 @@ export class SimpleSTTComponent implements OnInit, OnDestroy {
   // Connect WebSocket
   connectWebSocket() {
     console.log('🔌 Attempting WebSocket connection...');
-    this.websocket = new WebSocket('ws://localhost:5001');
+    this.websocket = new WebSocket('ws://localhost:5000');
     
     this.websocket.onopen = () => {
       console.log('✅ WebSocket connected');

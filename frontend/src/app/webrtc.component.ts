@@ -211,7 +211,7 @@ export class WebRTCSTTComponent implements OnInit, OnDestroy {
   // WebSocket 연결
   connectWebSocket() {
     console.log('🔌 WebSocket 연결 시도...');
-    this.websocket = new WebSocket('ws://localhost:5001/ws');
+    this.websocket = new WebSocket('ws://localhost:5000/ws');
     
     this.websocket.onopen = () => {
       console.log('✅ WebSocket 연결됨');
@@ -401,7 +401,7 @@ export class WebRTCSTTComponent implements OnInit, OnDestroy {
       console.log('📤 서버에 Offer 전송 중...');
       
       // 서버에 Offer 전송
-      const response = await fetch('http://localhost:5001/offer', {
+      const response = await fetch('http://localhost:5000/offer', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
