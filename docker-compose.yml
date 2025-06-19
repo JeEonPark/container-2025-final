@@ -1,19 +1,25 @@
 services:
   backend:
-    build: ./backend-service
+    build: ./backend
+    ports:
+      - "8080:8080"  # WebSocket server
+      - "8081:8081"  # HTTP server
     environment:
-      - FLASK_ENV=production
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./backend:/app  # Development mode (optional)
     networks:
       - app-network
 
-  frontend:
-    build: ./frontend-service
-    ports:
-      - "4200:80"
-    depends_on:
-      - backend
-    networks:
-      - app-network
+  # Frontend service (if needed later)
+  # frontend:
+  #   build: ./frontend
+  #   ports:
+  #     - "4200:80"
+  #   depends_on:
+  #     - backend
+  #   networks:
+  #     - app-network
 
 networks:
   app-network:
