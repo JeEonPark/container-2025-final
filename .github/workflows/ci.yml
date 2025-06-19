@@ -160,4 +160,27 @@ jobs:
         tags: ${{ steps.meta.outputs.FRONTEND_TAG }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
+
+    - name: Update Kubernetes manifests
+      run: |
+        if [ "${{ github.ref_name }}" = "local" ]; then
+          sed -i "s|ghcr.io/jeeonpark/backend-local:.*|${{ steps.meta.outputs.BACKEND_TAG }}|g" k8s/local/backend-deployment.yaml
+          sed -i "s|ghcr.io/jeeonpark/frontend-local:.*|${{ steps.meta.outputs.FRONTEND_TAG }}|g" k8s/local/frontend-deployment.yaml
+        else
+          sed -i "s|ghcr.io/jeeonpark/backend:.*|${{ steps.meta.outputs.BACKEND_TAG }}|g" k8s/aws/backend-deployment.yaml
+          sed -i "s|ghcr.io/jeeonpark/frontend:.*|${{ steps.meta.outputs.FRONTEND_TAG }}|g" k8s/aws/frontend-deployment.yaml
+        fi
+
+    - name: Commit and push updated manifests
+      run: |
+        git config --local user.email "jonny@devjonny.me"
+        git config --local user.name "DevJonny"
+        if [ "${{ github.ref_name }}" = "local" ]; then
+          git add k8s/local/
+        else
+          git add k8s/aws/
+        fi
+        git commit -m "Update image tags to ${GITHUB_SHA::8}" || exit 0
+        git remote set-url origin https://x-access-token:${{ secrets.GHCR_TOKEN }}@github.com/${{ github.repository }}.git
+        git push
         
