@@ -2,9 +2,9 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, local ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, develop, local ]
 
 permissions:
   contents: write
@@ -133,8 +133,13 @@ jobs:
       id: meta
       run: |
         OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-        echo "BACKEND_TAG=ghcr.io/${OWNER_LOWER}/backend:${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
-        echo "FRONTEND_TAG=ghcr.io/${OWNER_LOWER}/frontend:${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+        if [ "${{ github.ref_name }}" = "local" ]; then
+          echo "BACKEND_TAG=ghcr.io/${OWNER_LOWER}/backend-local:${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+          echo "FRONTEND_TAG=ghcr.io/${OWNER_LOWER}/frontend-local:${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+        else
+          echo "BACKEND_TAG=ghcr.io/${OWNER_LOWER}/backend:${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+          echo "FRONTEND_TAG=ghcr.io/${OWNER_LOWER}/frontend:${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+        fi
 
     - name: Build and push backend image
       uses: docker/build-push-action@v5
