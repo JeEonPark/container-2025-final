@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
       - name: backend
-        image: ghcr.io/jeeonpark/backend-local:4dba864c
+        image: ghcr.io/jeeonpark/backend-local:5abe57bf
         imagePullPolicy: Always
         ports:
         - containerPort: 5000
