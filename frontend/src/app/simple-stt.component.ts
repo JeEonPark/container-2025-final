@@ -166,7 +166,7 @@ export class SimpleSTTComponent implements OnInit, OnDestroy {
   isStreaming = false;
   websocketStatus = 'disconnected';
   audioStatus = 'inactive';
-  currentStatus = 'Waiting';
+  currentStatus = '대기 중';
   
   // WebSocket
   websocket: WebSocket | null = null;
@@ -188,6 +188,24 @@ export class SimpleSTTComponent implements OnInit, OnDestroy {
   sttResults: any[] = [];
   totalSttResults = 0;
   sessionStartTime = 0;
+
+  // Environment-based backend URL
+  private getBackendUrl(): string {
+    // Use service name in Docker environment, localhost for local
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return 'localhost:5000';
+    } else {
+      // Use current host's 5000 port in Docker environment
+      return `${hostname}:5000`;
+    }
+  }
+
+  private getWebSocketUrl(): string {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const backendUrl = this.getBackendUrl();
+    return `${protocol}//${backendUrl}/ws`;
+  }
 
   async ngOnInit() {
     await this.loadMicrophones();
@@ -222,11 +240,13 @@ export class SimpleSTTComponent implements OnInit, OnDestroy {
 
   // Connect WebSocket
   connectWebSocket() {
-    console.log('🔌 Attempting WebSocket connection...');
-    this.websocket = new WebSocket('ws://localhost:5000');
+    console.log('🔌 WebSocket 연결 시도...');
+    const wsUrl = this.getWebSocketUrl();
+    console.log(`🔗 WebSocket URL: ${wsUrl}`);
+    this.websocket = new WebSocket(wsUrl);
     
     this.websocket.onopen = () => {
-      console.log('✅ WebSocket connected');
+      console.log('✅ WebSocket 연결됨');
       this.websocketStatus = 'connected';
       this.currentStatus = '✅ WebSocket connected';
       
@@ -237,7 +257,7 @@ export class SimpleSTTComponent implements OnInit, OnDestroy {
     this.websocket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log('📨 WebSocket message:', data);
+        console.log('📨 WebSocket 메시지:', data);
         
         if (data.type === 'stt_result') {
           this.totalSttResults++;

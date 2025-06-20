@@ -177,6 +177,30 @@ export class WebRTCSTTComponent implements OnInit, OnDestroy {
   totalSttResults = 0;
   sessionStartTime = 0;
 
+  // 환경별 백엔드 URL 설정
+  private getBackendUrl(): string {
+    // 도커 환경에서는 서비스 이름 사용, 로컬에서는 localhost 사용
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return 'localhost:5000';
+    } else {
+      // 도커 환경에서는 현재 호스트의 5000 포트 사용
+      return `${hostname}:5000`;
+    }
+  }
+
+  private getWebSocketUrl(): string {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const backendUrl = this.getBackendUrl();
+    return `${protocol}//${backendUrl}/ws`;
+  }
+
+  private getHttpUrl(): string {
+    const protocol = window.location.protocol;
+    const backendUrl = this.getBackendUrl();
+    return `${protocol}//${backendUrl}`;
+  }
+
   async ngOnInit() {
     await this.loadMicrophones();
     this.connectWebSocket();
@@ -211,7 +235,9 @@ export class WebRTCSTTComponent implements OnInit, OnDestroy {
   // WebSocket 연결
   connectWebSocket() {
     console.log('🔌 WebSocket 연결 시도...');
-    this.websocket = new WebSocket('ws://localhost:5000/ws');
+    const wsUrl = this.getWebSocketUrl();
+    console.log(`🔗 WebSocket URL: ${wsUrl}`);
+    this.websocket = new WebSocket(wsUrl);
     
     this.websocket.onopen = () => {
       console.log('✅ WebSocket 연결됨');
@@ -401,7 +427,8 @@ export class WebRTCSTTComponent implements OnInit, OnDestroy {
       console.log('📤 서버에 Offer 전송 중...');
       
       // 서버에 Offer 전송
-      const response = await fetch('http://localhost:5000/offer', {
+      const httpUrl = this.getHttpUrl();
+      const response = await fetch(`${httpUrl}/offer`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -428,7 +455,7 @@ export class WebRTCSTTComponent implements OnInit, OnDestroy {
       );
       
       console.log('✅ WebRTC 연결 설정 완료');
-      this.currentStatus = '🎤 WebRTC 스트리밍 시작됨';
+      this.currentStatus = '✅ WebRTC 스트리밍 시작됨';
       
     } catch (error) {
       console.error('❌ WebRTC 시작 실패:', error);

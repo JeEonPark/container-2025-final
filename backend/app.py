@@ -16,6 +16,10 @@ import numpy as np
 import websockets
 from faster_whisper import WhisperModel
 from transformers import M2M100ForConditionalGeneration, M2M100Tokenizer
+import aiohttp
+import aiohttp_cors
+from aiohttp import web
+from aiohttp.web import WebSocketResponse, WSMsgType
 
 # Global variables
 model: WhisperModel = None
@@ -413,7 +417,7 @@ class WhisperProcessor:
 async def send_result(websocket, result: dict) -> None:
     """Send result to client"""
     try:
-        await websocket.send(json.dumps(result))
+        await websocket.send_json(result)
     except:
         pass
 
@@ -426,7 +430,7 @@ async def send_status(websocket, status: str) -> None:
         'timestamp': time.time()
     }
     try:
-        await websocket.send(json.dumps(message))
+        await websocket.send_json(message)
     except:
         pass
 
@@ -488,80 +492,6 @@ async def process_audio_chunk(websocket, pcm_data: np.ndarray, session_id: str) 
         print(f"❌ Audio processing error: {e}")
 
 
-async def handle_websocket(websocket, path: str) -> None:
-    """Handle WebSocket connection"""
-    session_id = f"session_{len(connected_clients)}_{int(time.time())}"
-    connected_clients.add(websocket)
-    print(f"🔌 WebSocket connected (session: {session_id}, total: {len(connected_clients)})")
-    
-    try:
-        # Connection confirmation message
-        await websocket.send(json.dumps({
-            'type': 'connected',
-            'message': 'Whisper VAD STT server connected',
-            'session_id': session_id
-        }))
-        
-        async for message in websocket:
-            try:
-                data = json.loads(message)
-                
-                if data['type'] == 'audio':
-                    # Decode Base64 to extract PCM data
-                    pcm_base64 = data['data']
-                    pcm_bytes = base64.b64decode(pcm_base64)
-                    pcm_data = np.frombuffer(pcm_bytes, dtype=np.int16)
-                    
-                    # Process VAD
-                    await process_audio_chunk(websocket, pcm_data, session_id)
-                    
-                elif data['type'] == 'start':
-                    print(f"🎤 Streaming started (session: {session_id})")
-                    await send_status(websocket, "🎤 Speech recognition started")
-                    
-                elif data['type'] == 'stop':
-                    print(f"🛑 Streaming stopped (session: {session_id})")
-                    if session_id in audio_sessions:
-                        del audio_sessions[session_id]
-                    await send_status(websocket, "🛑 Speech recognition stopped")
-                
-                elif data['type'] == 'set_target_language':
-                    # Set translation target language
-                    target_lang = data.get('language', 'ko')
-                    if session_id in audio_sessions:
-                        audio_sessions[session_id].target_language = target_lang
-                        print(f"🌐 Target language set to: {target_lang} (session: {session_id})")
-                        await send_status(websocket, f"🌐 Translation target set to: {target_lang}")
-                
-                elif data['type'] == 'get_supported_languages':
-                    # Send supported languages list
-                    if translation_model and translation_tokenizer:
-                        translation_proc = TranslationProcessor(translation_model, translation_tokenizer)
-                        supported_langs = translation_proc.get_supported_languages()
-                        await websocket.send(json.dumps({
-                            'type': 'supported_languages',
-                            'languages': supported_langs
-                        }))
-                    else:
-                        await websocket.send(json.dumps({
-                            'type': 'supported_languages',
-                            'languages': {}
-                        }))
-                
-            except json.JSONDecodeError:
-                print(f"❌ JSON parsing error")
-            except Exception as e:
-                print(f"❌ Message processing error: {e}")
-                
-    except Exception as e:
-        print(f"❌ WebSocket processing error: {e}")
-    finally:
-        connected_clients.discard(websocket)
-        if session_id in audio_sessions:
-            del audio_sessions[session_id]
-        print(f"❌ WebSocket disconnected (session: {session_id}, remaining: {len(connected_clients)})")
-
-
 def initialize_whisper_model() -> WhisperModel:
     """Initialize Whisper model"""
     print("🚀 Loading Whisper model...")
@@ -584,6 +514,95 @@ def initialize_translation_model() -> Tuple[M2M100ForConditionalGeneration, M2M1
         return None, None
 
 
+# --- Add these handlers before main() ---
+async def health_check(request):
+    return web.json_response({'status': 'ok'})
+
+async def offer_handler(request):
+    return web.json_response({'status': 'ok'})
+
+async def websocket_handler(request):
+    """Handle WebSocket connections"""
+    ws = web.WebSocketResponse()
+    await ws.prepare(request)
+    
+    session_id = f"session_{len(connected_clients)}_{int(time.time())}"
+    connected_clients.add(ws)
+    print(f"🔌 WebSocket connected (session: {session_id}, total: {len(connected_clients)})")
+    
+    try:
+        # Connection confirmation message
+        await ws.send_json({
+            'type': 'connected',
+            'message': 'Whisper VAD STT server connected',
+            'session_id': session_id
+        })
+        
+        async for msg in ws:
+            if msg.type == WSMsgType.TEXT:
+                try:
+                    data = json.loads(msg.data)
+                    
+                    if data['type'] == 'audio':
+                        # Decode Base64 to extract PCM data
+                        pcm_base64 = data['data']
+                        pcm_bytes = base64.b64decode(pcm_base64)
+                        pcm_data = np.frombuffer(pcm_bytes, dtype=np.int16)
+                        
+                        # Process VAD
+                        await process_audio_chunk(ws, pcm_data, session_id)
+                        
+                    elif data['type'] == 'start':
+                        print(f"🎤 Streaming started (session: {session_id})")
+                        await send_status(ws, "🎤 Speech recognition started")
+                        
+                    elif data['type'] == 'stop':
+                        print(f"🛑 Streaming stopped (session: {session_id})")
+                        if session_id in audio_sessions:
+                            del audio_sessions[session_id]
+                        await send_status(ws, "🛑 Speech recognition stopped")
+                    
+                    elif data['type'] == 'set_target_language':
+                        # Set translation target language
+                        target_lang = data.get('language', 'ko')
+                        if session_id in audio_sessions:
+                            audio_sessions[session_id].target_language = target_lang
+                            print(f"🌐 Target language set to: {target_lang} (session: {session_id})")
+                            await send_status(ws, f"🌐 Translation target set to: {target_lang}")
+                    
+                    elif data['type'] == 'get_supported_languages':
+                        # Send supported languages list
+                        if translation_model and translation_tokenizer:
+                            translation_proc = TranslationProcessor(translation_model, translation_tokenizer)
+                            supported_langs = translation_proc.get_supported_languages()
+                            await ws.send_json({
+                                'type': 'supported_languages',
+                                'languages': supported_langs
+                            })
+                        else:
+                            await ws.send_json({
+                                'type': 'supported_languages',
+                                'languages': {}
+                            })
+                    
+                except json.JSONDecodeError:
+                    print(f"❌ JSON parsing error")
+                except Exception as e:
+                    print(f"❌ Message processing error: {e}")
+                    
+            elif msg.type == WSMsgType.ERROR:
+                print(f"❌ WebSocket error: {ws.exception()}")
+                
+    except Exception as e:
+        print(f"❌ WebSocket processing error: {e}")
+    finally:
+        connected_clients.discard(ws)
+        if session_id in audio_sessions:
+            del audio_sessions[session_id]
+        print(f"❌ WebSocket disconnected (session: {session_id}, remaining: {len(connected_clients)})")
+    
+    return ws
+
 async def main():
     """Main server function"""
     global model, translation_model, translation_tokenizer
@@ -594,17 +613,42 @@ async def main():
     # Initialize translation model
     translation_model, translation_tokenizer = initialize_translation_model()
     
-    # Start WebSocket server on port 5000 to match Kubernetes deployment
-    print("🎤 Starting WebSocket STT server on ws://0.0.0.0:5000")
+    # Create aiohttp app
+    app = web.Application()
     
-    # Fix: Use lambda to properly handle the path parameter
-    async with websockets.serve(lambda ws, path: handle_websocket(ws, path), "0.0.0.0", 5000):
-        print("✅ WebSocket server started successfully")
-        print("🔗 Connect to: ws://localhost:5000")
-        print("🛑 Press Ctrl+C to stop")
-        
-        # Keep server running
-        await asyncio.Future()  # Run forever
+    # Add routes
+    app.router.add_get('/health', health_check)
+    app.router.add_post('/offer', offer_handler)
+    app.router.add_get('/ws', websocket_handler)
+    
+    # Configure CORS
+    cors = aiohttp_cors.setup(app, defaults={
+        "*": aiohttp_cors.ResourceOptions(
+            allow_credentials=True,
+            expose_headers="*",
+            allow_headers="*",
+            allow_methods="*"
+        )
+    })
+    
+    # Add CORS to all routes
+    for route in list(app.router.routes()):
+        cors.add(route)
+    
+    # Start server
+    print("🎤 Starting HTTP/WebSocket STT server on http://0.0.0.0:5000")
+    print("🔗 WebSocket: ws://localhost:5000/ws")
+    print("🔗 Health: http://localhost:5000/health")
+    print("🔗 Offer: http://localhost:5000/offer")
+    print("🛑 Press Ctrl+C to stop")
+    
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, '0.0.0.0', 5000)
+    await site.start()
+    
+    # Keep server running
+    await asyncio.Future()  # Run forever
 
 
 if __name__ == "__main__":

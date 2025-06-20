@@ -41,9 +41,17 @@ export class App implements OnInit, OnDestroy {
   totalSTTResults = 0;
   sessionStartTime = 0;
 
+  title = 'Live Translator';
+  currentTime = new Date();
+  isConnected = false;
+  messageCount = 0;
+  lastMessage = '';
+  messages: any[] = [];
+
   async ngOnInit() {
     this.connectSocket();
     await this.loadMicrophones();
+    this.startTimeUpdate();
   }
 
   ngOnDestroy() {
@@ -58,8 +66,15 @@ export class App implements OnInit, OnDestroy {
     console.log('🔌 WebSocket 연결 시도...');
     this.connectionStatus = '연결 중...';
     
-    this.socket = io('http://localhost:5000', {
-      transports: ['websocket', 'polling']
+    const backendUrl = this.getBackendUrl();
+    const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
+    const socketUrl = `${protocol}//${backendUrl}`;
+    
+    console.log(`🔌 Socket.IO 연결 시도: ${socketUrl}`);
+    this.socket = io(socketUrl, {
+      transports: ['websocket', 'polling'],
+      timeout: 20000,
+      forceNew: true
     });
     
     this.socket.on('connect', () => {
@@ -319,5 +334,23 @@ export class App implements OnInit, OnDestroy {
     const duration = (Date.now() - this.sessionStartTime) / 1000;
     const chunksPerSecond = this.totalChunks / duration;
     return `${duration.toFixed(0)}초, ${this.totalChunks}개 chunk (${chunksPerSecond.toFixed(1)}/초), ${this.totalSTTResults}개 결과`;
+  }
+
+  startTimeUpdate() {
+    setInterval(() => {
+      this.currentTime = new Date();
+    }, 1000);
+  }
+
+  // 환경별 백엔드 URL 설정
+  private getBackendUrl(): string {
+    // 도커 환경에서는 서비스 이름 사용, 로컬에서는 localhost 사용
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return 'localhost:5000';
+    } else {
+      // 도커 환경에서는 현재 호스트의 5000 포트 사용
+      return `${hostname}:5000`;
+    }
   }
 }

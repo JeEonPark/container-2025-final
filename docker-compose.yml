@@ -1,25 +1,40 @@
+version: '3.8'
+
 services:
-  backend:
+  backend-service:
     build: ./backend
     ports:
-      - "8080:8080"  # WebSocket server
-      - "8081:8081"  # HTTP server
+      - "5000:5000"  # WebSocket server port
     environment:
       - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
     volumes:
       - ./backend:/app  # Development mode (optional)
     networks:
       - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # Frontend service (if needed later)
-  # frontend:
-  #   build: ./frontend
-  #   ports:
-  #     - "4200:80"
-  #   depends_on:
-  #     - backend
-  #   networks:
-  #     - app-network
+  frontend:
+    build: ./frontend
+    ports:
+      - "4200:80"  # Angular app served by nginx
+    depends_on:
+      - backend-service
+    environment:
+      - BACKEND_URL=http://backend-service:5000
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 networks:
   app-network:

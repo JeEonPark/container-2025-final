@@ -29,7 +29,7 @@ USER app
 # Copy application code
 COPY --chown=app:app . .
 
-# Expose both ports (WebSocket and HTTP)
-EXPOSE 8080 8081
+# Expose WebSocket server port
+EXPOSE 5000
 
 CMD ["python", "app.py"]
