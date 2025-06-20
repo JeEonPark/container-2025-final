@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -6,167 +6,204 @@ import { FormsModule } from '@angular/forms';
   selector: 'app-simple-stt',
   imports: [CommonModule, FormsModule],
   template: `
-    <div style="text-align: center; padding: 2rem; max-width: 1000px; margin: 0 auto;">
-      <h1>🎤 Real-time Whisper STT</h1>
-      <p style="color: #666; margin-bottom: 2rem;">
-        Real-time audio streaming + VAD + Whisper STT with WebSocket + Web Audio API
-      </p>
-
-      <!-- Connection Status -->
-      <div style="margin-bottom: 2rem; padding: 1rem; border-radius: 8px; background-color: #f8f9fa;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-          <div>
-            <strong>🔌 WebSocket:</strong> 
-            <span [style.color]="websocketStatus === 'connected' ? '#28a745' : '#dc3545'">
-              {{ websocketStatus }}
-            </span>
-          </div>
-          <div>
-            <strong>🎤 Audio:</strong> 
-            <span [style.color]="audioStatus === 'active' ? '#28a745' : '#dc3545'">
-              {{ audioStatus }}
-            </span>
-          </div>
-          <div>
-            <strong>⚙️ Status:</strong> 
-            <span [style.color]="currentStatus.includes('✅') ? '#28a745' : currentStatus.includes('❌') ? '#dc3545' : '#007bff'">
-              {{ currentStatus }}
-            </span>
-          </div>
-        </div>
-        
-        <!-- Session Statistics -->
-        <div *ngIf="isStreaming" style="margin-top: 1rem; font-size: 14px; color: #666;">
-          <strong>📊 Session:</strong> {{ getSessionStats() }}
-        </div>
-      </div>
-
-      <!-- Microphone Selection -->
-      <div style="margin-bottom: 2rem;">
-        <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
-          🎤 Select Microphone:
-        </label>
-        <select 
-          [(ngModel)]="selectedMicId" 
-          [disabled]="isStreaming"
-          style="padding: 8px; font-size: 14px; border-radius: 4px; border: 1px solid #ccc; min-width: 300px;">
-          <option value="" disabled>Please select a microphone</option>
-          <option *ngFor="let mic of microphones" [value]="mic.deviceId">
-            {{ mic.label || 'Microphone ' + (microphones.indexOf(mic) + 1) }}
-          </option>
-        </select>
-      </div>
-
-      <!-- Translation Selection -->
-      <div style="margin-bottom: 2rem;">
-        <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">
-          🌐 Select Target Language:
-        </label>
-        <select 
-          [(ngModel)]="selectedTargetLanguage"
-          (change)="onTargetLanguageChange()"
-          [disabled]="isStreaming"
-          style="padding: 8px; font-size: 14px; border-radius: 4px; border: 1px solid #ccc; min-width: 300px;">
-          <option *ngFor="let lang of getLanguageOptions()" [value]="lang.code">
-            {{ lang.name }}
-          </option>
-        </select>
-      </div>
-
-      <!-- Control Buttons -->
-      <div style="margin-bottom: 2rem;">
-        <button 
-          (click)="isStreaming ? stopStreaming() : startStreaming()"
-          [disabled]="!selectedMicId || websocketStatus !== 'connected'"
-          style="padding: 12px 24px; font-size: 16px; border-radius: 8px; border: none; color: white; cursor: pointer; margin-right: 10px;"
-          [style.background-color]="isStreaming ? '#dc3545' : '#28a745'"
-          [style.opacity]="!selectedMicId || websocketStatus !== 'connected' ? '0.5' : '1'">
-          {{ isStreaming ? '🛑 Stop Streaming' : '🎙 Start Audio Streaming' }}
-        </button>
-
-        <button 
-          (click)="clearResults()"
-          [disabled]="isStreaming"
-          style="padding: 12px 24px; font-size: 16px; border-radius: 8px; border: 1px solid #ccc; background-color: #f8f9fa; color: #333; cursor: pointer;"
-          [style.opacity]="isStreaming ? '0.5' : '1'">
-          🗑️ Clear Results
-        </button>
-      </div>
-
-      <!-- Real-time Status Display -->
-      <div style="margin-bottom: 2rem;">
-        <div *ngIf="isStreaming" style="padding: 1rem; border-radius: 8px; background-color: #d4edda; border: 1px solid #c3e6cb;">
-          <div style="color: #155724; font-weight: bold; margin-bottom: 0.5rem;">
-            🔴 Real-time audio streaming active... 
-          </div>
-          <div style="font-size: 12px; color: #155724;">
-            • Real-time PCM capture via Web Audio API<br>
-            • Send to server via WebSocket<br>
-            • Automatic VAD + Whisper processing on server<br>
-            • Total {{ totalSttResults }} results received
-          </div>
-        </div>
-        
-        <div *ngIf="!isStreaming" style="padding: 1rem; border-radius: 8px; background-color: #f8f9fa; border: 1px solid #dee2e6;">
-          <div style="color: #6c757d; font-weight: bold; margin-bottom: 0.5rem;">
-            💤 Waiting
-          </div>
-          <div style="font-size: 12px; color: #6c757d;">
-            Start audio streaming to process speech in real-time
-          </div>
-        </div>
-      </div>
-
-      <!-- STT Results -->
-      <div style="text-align: left;">
-        <h3 style="text-align: center; margin-bottom: 1rem;">
-          📝 Real-time STT Results ({{ totalSttResults }})
-        </h3>
-        <div style="border: 1px solid #ddd; border-radius: 8px; padding: 1rem; background-color: #f8f9fa; min-height: 300px; max-height: 600px; overflow-y: auto;">
-          <div *ngIf="sttResults.length === 0" style="color: #999; text-align: center; padding: 2rem;">
-            Start audio streaming and speak to see transcribed text here.<br>
-            <small>Server's WebSocket + VAD + Whisper processes in real-time.</small>
-          </div>
-          
-          <div *ngFor="let result of sttResults; let i = index" 
-               style="margin-bottom: 15px; padding: 12px; border-radius: 6px; background-color: white; border-left: 4px solid #007bff;">
-            <div style="display: flex; justify-content: between; align-items: center; margin-bottom: 8px;">
-              <div style="font-size: 12px; color: #666;">
-                #{{ totalSttResults - i }} | {{ result.timestamp }}
+    <div class="h-screen bg-gray-50 flex flex-col">
+      <!-- Header -->
+      <div class="bg-white border-b border-gray-200 flex-shrink-0">
+        <div class="w-full px-6 py-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h1 class="text-3xl font-bold text-gray-900">
+                Voice Translator
+              </h1>
+              <p class="text-base text-gray-500 mt-1">Real-time speech-to-text with instant translation</p>
+            </div>
+            <div class="flex items-center space-x-6">
+              <!-- Status Indicators -->
+              <div class="flex items-center space-x-2">
+                <div class="w-3 h-3 rounded-full" 
+                     [class]="websocketStatus === 'connected' ? 'bg-green-500' : 'bg-red-500'"></div>
+                <span class="text-sm text-gray-600 font-medium">Connection</span>
               </div>
-              <div style="font-size: 12px; color: #666;">
-                [{{ result.language }}] {{ result.duration }}s | STT: {{ result.processingTime }}s | Translation: {{ result.translationTime }}s
+              <div class="flex items-center space-x-2">
+                <div class="w-3 h-3 rounded-full" 
+                     [class]="audioStatus === 'active' ? 'bg-blue-500' : 'bg-gray-400'"></div>
+                <span class="text-sm text-gray-600 font-medium">Microphone</span>
               </div>
             </div>
-            <div style="font-size: 16px; word-break: break-word; line-height: 1.4; margin-bottom: 8px;">
-              <strong>Original:</strong> {{ result.text }}
-            </div>
-            <div *ngIf="result.translatedText" style="font-size: 16px; word-break: break-word; line-height: 1.4; color: #007bff;">
-              <strong>Translation:</strong> {{ result.translatedText }}
-            </div>
           </div>
         </div>
       </div>
 
-      <!-- Technical Information -->
-      <div style="margin-top: 2rem; font-size: 12px; color: #666; text-align: left;">
-        <strong>📡 Technical Stack:</strong><br>
-        • <strong>Client:</strong> Angular + Web Audio API (AudioContext)<br>
-        • <strong>Server:</strong> Python + WebSocket + asyncio<br>
-        • <strong>Audio Processing:</strong> Real-time VAD + Whisper<br>
-        • <strong>Communication:</strong> WebSocket (PCM data + results)<br>
-        • <strong>Features:</strong> Simple and stable without WebRTC
+      <!-- Main Content -->
+      <div class="flex-1 flex flex-col w-full px-6 py-4">
+        <!-- Control Panel -->
+        <div class="bg-white rounded-lg border border-gray-200 mb-4 flex-shrink-0">
+          <div class="p-4">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 items-end">
+              <!-- Microphone Selection -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Microphone Device
+                </label>
+                <select 
+                  [(ngModel)]="selectedMicId" 
+                  [disabled]="isStreaming"
+                  class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500">
+                  <option value="" disabled>Select microphone</option>
+                  <option *ngFor="let mic of microphones" [value]="mic.deviceId">
+                    {{ mic.label || 'Microphone ' + (microphones.indexOf(mic) + 1) }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Language Selection -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Translate to
+                </label>
+                <select 
+                  [(ngModel)]="selectedTargetLanguage"
+                  (ngModelChange)="onTargetLanguageChange()"
+                  [disabled]="isStreaming"
+                  class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500">
+                  <option *ngFor="let lang of getLanguageOptions()" [value]="lang.code">
+                    {{ lang.name }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Control Buttons -->
+              <div class="flex space-x-3">
+                <button 
+                  (click)="isStreaming ? stopStreaming() : startStreaming()"
+                  [disabled]="!selectedMicId || websocketStatus !== 'connected'"
+                  class="flex items-center space-x-2 px-6 py-2 rounded-lg font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  [class]="isStreaming ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'">
+                  <span class="font-bold">{{ isStreaming ? 'Stop' : 'Start' }}</span>
+                </button>
+
+                <button 
+                  (click)="clearResults()"
+                  [disabled]="isStreaming"
+                  class="px-4 py-2 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                  <span class="font-bold">CLEAR</span>
+                </button>
+              </div>
+
+              <!-- Status & Stats -->
+              <div class="text-right">
+                <div class="text-sm font-medium mb-1"
+                     [class]="getStatusClass()">
+                  {{ currentStatus }}
+                </div>
+                <div *ngIf="isStreaming" class="text-xs text-gray-500">
+                  {{ getSessionStats() }}
+                </div>
+                <div *ngIf="!isStreaming && totalSttResults > 0" class="text-xs text-gray-500">
+                  {{ totalSttResults }} translations completed
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Translation Results Container -->
+        <div class="bg-white rounded-lg border border-gray-200 flex-1 flex flex-col" style="max-height: calc(100vh - 280px);">
+          <!-- Results Header -->
+          <div class="border-b border-gray-200 px-4 py-3 flex-shrink-0">
+            <div class="flex items-center justify-between">
+              <h3 class="text-lg font-semibold text-gray-900">
+                Translation History
+              </h3>
+              <div class="flex items-center space-x-2">
+                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+                  {{ totalSttResults }} results
+                </span>
+                <div *ngIf="isStreaming" class="flex items-center space-x-2 bg-blue-50 rounded px-2 py-1">
+                  <div class="flex space-x-1">
+                    <div class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0ms"></div>
+                    <div class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 150ms"></div>
+                    <div class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 300ms"></div>
+                  </div>
+                  <span class="text-blue-700 text-xs font-medium">Processing...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Results Area -->
+          <div class="flex-1 overflow-y-auto p-4 space-y-4" #messagesContainer>
+            <!-- Empty State -->
+            <div *ngIf="sttResults.length === 0" class="flex flex-col items-center justify-center h-full text-gray-500">
+              <div class="text-2xl mb-2 font-bold text-gray-300">TRANSLATE</div>
+              <p class="text-base font-medium text-gray-700">Ready to translate</p>
+              <p class="text-sm text-center mt-1">Start recording to see real-time translation results</p>
+            </div>
+
+            <!-- Chat Messages -->
+            <div *ngFor="let result of sttResults.slice().reverse(); let i = index" class="animate-fade-in mb-4">
+              <!-- Single Message Bubble -->
+              <div class="flex justify-end">
+                <div class="max-w-3xl">
+                  <!-- Message Header -->
+                  <div class="flex items-center justify-end space-x-2 mb-1">
+                    <span class="text-xs text-gray-500">{{ result.timestamp }}</span>
+                    <span class="bg-blue-600 text-white px-2 py-1 rounded text-xs font-bold">
+                      #{{ sttResults.length - i }}
+                    </span>
+                    <div class="flex items-center space-x-1 text-xs text-gray-500">
+                      <span>{{ result.duration }}s</span>
+                      <span>•</span>
+                      <span>{{ result.processingTime }}s</span>
+                      <span *ngIf="result.translatedText">• {{ result.translationTime }}s</span>
+                    </div>
+                  </div>
+                  
+                  <!-- Message Bubble -->
+                  <div class="bg-blue-500 text-white rounded-lg px-6 py-5 rounded-br-sm shadow-lg">
+                    <!-- Original Text -->
+                    <div class="mb-4">
+                      <div class="flex items-center mb-2">
+                        <span class="text-sm opacity-80 font-semibold bg-blue-600 bg-opacity-50 px-2 py-1 rounded text-xs">{{ result.language.toUpperCase() }}</span>
+                      </div>
+                      <p class="text-lg opacity-95 leading-relaxed font-normal">{{ result.text }}</p>
+                    </div>
+                    
+                    <!-- Divider -->
+                    <div class="border-t-2 border-blue-300 border-opacity-40 my-4"></div>
+                    
+                    <!-- Translation -->
+                    <div *ngIf="result.translatedText">
+                      <div class="flex items-center mb-3">
+                        <span class="text-sm opacity-80 font-semibold bg-blue-600 bg-opacity-50 px-2 py-1 rounded text-xs">{{ selectedTargetLanguage.toUpperCase() }}</span>
+                      </div>
+                      <p class="text-2xl font-semibold leading-relaxed">{{ result.translatedText }}</p>
+                    </div>
+
+                    <!-- No Translation Message -->
+                    <div *ngIf="!result.translatedText">
+                      <p class="text-lg italic opacity-80 text-center">Translation not available</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
       </div>
     </div>
   `,
   standalone: true
 })
-export class SimpleSTTComponent implements OnInit, OnDestroy {
+export class SimpleSTTComponent implements OnInit, OnDestroy, AfterViewChecked {
+  @ViewChild('messagesContainer') private messagesContainer!: ElementRef;
   // Status
   isStreaming = false;
   websocketStatus = 'disconnected';
   audioStatus = 'inactive';
-  currentStatus = '대기 중';
+  currentStatus = 'Ready to connect';
   
   // WebSocket
   websocket: WebSocket | null = null;
@@ -188,6 +225,9 @@ export class SimpleSTTComponent implements OnInit, OnDestroy {
   sttResults: any[] = [];
   totalSttResults = 0;
   sessionStartTime = 0;
+  
+  // Auto scroll
+  private shouldScrollToBottom = false;
 
   // Environment-based backend URL
   private getBackendUrl(): string {
@@ -217,10 +257,17 @@ export class SimpleSTTComponent implements OnInit, OnDestroy {
     this.disconnectWebSocket();
   }
 
+  ngAfterViewChecked() {
+    if (this.shouldScrollToBottom) {
+      this.scrollToBottom();
+      this.shouldScrollToBottom = false;
+    }
+  }
+
   // Load microphone list
   async loadMicrophones() {
     try {
-      console.log('🎤 Requesting microphone permission...');
+      console.log('Requesting microphone permission...');
       await navigator.mediaDevices.getUserMedia({ audio: true });
       
       const devices = await navigator.mediaDevices.enumerateDevices();
@@ -228,36 +275,39 @@ export class SimpleSTTComponent implements OnInit, OnDestroy {
       
       if (this.microphones.length > 0) {
         this.selectedMicId = this.microphones[0].deviceId;
-        console.log(`✅ Default microphone selected: ${this.getSelectedMicName()}`);
+        console.log(`Default microphone selected: ${this.getSelectedMicName()}`);
       }
       
-      console.log(`🎤 Available microphones: ${this.microphones.length}`);
+      console.log(`Available microphones: ${this.microphones.length}`);
     } catch (error) {
-      console.error('❌ Microphone permission error:', error);
+      console.error('Microphone permission error:', error);
       alert('Please allow microphone permission!');
     }
   }
 
   // Connect WebSocket
   connectWebSocket() {
-    console.log('🔌 WebSocket 연결 시도...');
+    console.log('Connecting to WebSocket...');
     const wsUrl = this.getWebSocketUrl();
-    console.log(`🔗 WebSocket URL: ${wsUrl}`);
+    console.log(`WebSocket URL: ${wsUrl}`);
     this.websocket = new WebSocket(wsUrl);
     
     this.websocket.onopen = () => {
-      console.log('✅ WebSocket 연결됨');
+      console.log('WebSocket connected');
       this.websocketStatus = 'connected';
-      this.currentStatus = '✅ WebSocket connected';
+      this.currentStatus = 'Connected';
       
       // Request supported languages
       this.requestSupportedLanguages();
+      
+      // Send initial language setting
+      this.onTargetLanguageChange();
     };
     
     this.websocket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log('📨 WebSocket 메시지:', data);
+        console.log('WebSocket message:', data);
         
         if (data.type === 'stt_result') {
           this.totalSttResults++;
@@ -274,27 +324,30 @@ export class SimpleSTTComponent implements OnInit, OnDestroy {
             audioLevel: data.audio_level?.toFixed(0) || '?'
           });
           
-          // Keep maximum 20 results (newest at top, so remove from bottom)
-          if (this.sttResults.length > 20) {
+          // Keep maximum 50 results for lecture hall display
+          if (this.sttResults.length > 50) {
             this.sttResults.pop();
           }
           
-          this.currentStatus = `✅ STT completed #${this.totalSttResults}`;
-          console.log(`🎉 STT result #${this.totalSttResults}: ${data.text}`);
+          // Trigger auto scroll to bottom
+          this.shouldScrollToBottom = true;
+          
+          this.currentStatus = `Translation #${this.totalSttResults} completed`;
+          console.log(`STT result #${this.totalSttResults}: ${data.text}`);
           if (data.translated_text) {
-            console.log(`🌐 Translation result: ${data.translated_text}`);
+            console.log(`Translation result: ${data.translated_text}`);
           }
           
         } else if (data.type === 'status') {
           this.currentStatus = data.message;
-          console.log(`📢 Status: ${data.message}`);
+          console.log(`Status: ${data.message}`);
           
         } else if (data.type === 'connected') {
-          console.log('🤝 WebSocket connection confirmed');
+          console.log('WebSocket connection confirmed');
           
         } else if (data.type === 'supported_languages') {
           this.supportedLanguages = data.languages;
-          console.log('🌐 Supported languages:', this.supportedLanguages);
+          console.log('Supported languages:', this.supportedLanguages);
           
           // Set default language if not already set
           if (!this.selectedTargetLanguage && this.supportedLanguages['ko']) {
@@ -302,20 +355,20 @@ export class SimpleSTTComponent implements OnInit, OnDestroy {
           }
         }
       } catch (error) {
-        console.error('❌ WebSocket message parsing error:', error);
+        console.error('WebSocket message parsing error:', error);
       }
     };
     
     this.websocket.onclose = () => {
-      console.log('❌ WebSocket connection closed');
+      console.log('WebSocket connection closed');
       this.websocketStatus = 'disconnected';
-      this.currentStatus = '❌ WebSocket disconnected';
+      this.currentStatus = 'Disconnected';
     };
     
     this.websocket.onerror = (error) => {
-      console.error('🚫 WebSocket error:', error);
+      console.error('WebSocket error:', error);
       this.websocketStatus = 'error';
-      this.currentStatus = '🚫 WebSocket error';
+      this.currentStatus = 'Connection error';
     };
   }
 
@@ -335,9 +388,9 @@ export class SimpleSTTComponent implements OnInit, OnDestroy {
     }
 
     try {
-      console.log('🚀 Starting audio streaming');
+      console.log('Starting audio streaming');
       this.sessionStartTime = Date.now();
-      this.currentStatus = '🔄 Setting up audio...';
+      this.currentStatus = 'Setting up audio...';
       
       // Create AudioContext
       this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
@@ -356,7 +409,7 @@ export class SimpleSTTComponent implements OnInit, OnDestroy {
         }
       });
       
-      console.log('🎤 Microphone stream created');
+      console.log('Microphone stream created');
       
       // Create MediaStreamSource
       const source = this.audioContext.createMediaStreamSource(this.mediaStream);
@@ -388,7 +441,7 @@ export class SimpleSTTComponent implements OnInit, OnDestroy {
         // Show audio level
         const maxLevel = Math.max(...Array.from(pcmData).map(x => Math.abs(x)));
         if (maxLevel > 1000) {  // Log only above threshold
-          console.log(`🎵 Audio sent: ${pcmData.length} samples, max: ${maxLevel}`);
+          console.log(`Audio sent: ${pcmData.length} samples, max: ${maxLevel}`);
         }
       };
       
@@ -403,13 +456,13 @@ export class SimpleSTTComponent implements OnInit, OnDestroy {
       
       this.isStreaming = true;
       this.audioStatus = 'active';
-      this.currentStatus = '🎤 Audio streaming active';
+      this.currentStatus = 'Recording & translating...';
       
-      console.log('✅ Audio streaming started');
+      console.log('Audio streaming started');
       
     } catch (error) {
-      console.error('❌ Failed to start audio streaming:', error);
-      this.currentStatus = '❌ Audio start failed';
+      console.error('Failed to start audio streaming:', error);
+      this.currentStatus = 'Recording failed';
       this.audioStatus = 'error';
       alert(`Audio streaming failed: ${error}`);
       this.stopStreaming();
@@ -418,7 +471,7 @@ export class SimpleSTTComponent implements OnInit, OnDestroy {
 
   // Stop streaming
   stopStreaming() {
-    console.log('🛑 Stopping audio streaming');
+    console.log('Stopping audio streaming');
     
     // Send streaming stop signal
     if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
@@ -433,7 +486,7 @@ export class SimpleSTTComponent implements OnInit, OnDestroy {
     if (this.mediaStream) {
       this.mediaStream.getTracks().forEach(track => {
         track.stop();
-        console.log('⏹️ Track stopped');
+        console.log('Track stopped');
       });
       this.mediaStream = null;
     }
@@ -442,16 +495,16 @@ export class SimpleSTTComponent implements OnInit, OnDestroy {
     this.audioStatus = 'inactive';
     
     const sessionDuration = (Date.now() - this.sessionStartTime) / 1000;
-    console.log(`✅ Session completed: ${sessionDuration.toFixed(1)}s, ${this.totalSttResults} STT results`);
-    this.currentStatus = `✅ Session completed: ${sessionDuration.toFixed(1)}s`;
+    console.log(`Session completed: ${sessionDuration.toFixed(1)}s, ${this.totalSttResults} STT results`);
+    this.currentStatus = `Session completed`;
   }
 
   // Clear results
   clearResults() {
-    console.log('🗑️ Clearing results');
+    console.log('Clearing results');
     this.sttResults = [];
     this.totalSttResults = 0;
-    this.currentStatus = '🗑️ Results cleared';
+    this.currentStatus = 'History cleared';
   }
 
   // Get selected microphone name
@@ -464,10 +517,10 @@ export class SimpleSTTComponent implements OnInit, OnDestroy {
   getSessionStats(): string {
     if (!this.isStreaming) return '';
     const duration = (Date.now() - this.sessionStartTime) / 1000;
-    return `${duration.toFixed(0)}s streaming, ${this.totalSttResults} STT results`;
+    return `${duration.toFixed(0)}s • ${this.totalSttResults} translations`;
   }
 
-  // 언어 옵션 가져오기
+  // Get language options
   getLanguageOptions(): { code: string; name: string }[] {
     return Object.entries(this.supportedLanguages).map(([code, name]) => ({
       code,
@@ -477,7 +530,7 @@ export class SimpleSTTComponent implements OnInit, OnDestroy {
 
   // Handle language change
   onTargetLanguageChange() {
-    console.log('🌐 Language changed:', this.selectedTargetLanguage);
+    console.log('Language changed:', this.selectedTargetLanguage);
     
     // Send target language to server
     if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
@@ -485,7 +538,7 @@ export class SimpleSTTComponent implements OnInit, OnDestroy {
         type: 'set_target_language',
         language: this.selectedTargetLanguage
       }));
-      console.log(`🌐 Target language sent to server: ${this.selectedTargetLanguage}`);
+      console.log(`Target language sent to server: ${this.selectedTargetLanguage}`);
     }
   }
 
@@ -493,6 +546,26 @@ export class SimpleSTTComponent implements OnInit, OnDestroy {
   requestSupportedLanguages() {
     if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
       this.websocket.send(JSON.stringify({ type: 'get_supported_languages' }));
+    }
+  }
+
+  // Get status class for styling
+  getStatusClass(): string {
+    if (this.currentStatus.includes('completed') || this.currentStatus.includes('Connected')) return 'text-green-600';
+    if (this.currentStatus.includes('failed') || this.currentStatus.includes('error') || this.currentStatus.includes('Disconnected')) return 'text-red-600';
+    if (this.currentStatus.includes('Recording') || this.currentStatus.includes('Setting up')) return 'text-blue-600';
+    return 'text-gray-600';
+  }
+
+  // Auto scroll to bottom
+  private scrollToBottom(): void {
+    try {
+      if (this.messagesContainer) {
+        const element = this.messagesContainer.nativeElement;
+        element.scrollTop = element.scrollHeight;
+      }
+    } catch (err) {
+      console.error('Auto scroll error:', err);
     }
   }
 } 
